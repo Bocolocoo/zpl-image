@@ -14,7 +14,7 @@
 }(typeof self !== 'undefined' ? self : this, function () {
 
 const zlib = typeof process == 'object' && typeof process.release == 'object' &&
-				process.release.name == 'node' ? require('zlib') : null;
+				process.release.name == 'node' ? require('react-zlib-js') : null;
 
 // DOM-specialized version for browsers.
 function imageToZ64(img, opts) {
@@ -72,8 +72,9 @@ function rgbaToZ64(rgba, width, opts) {
 	if (zlib) {
 		b64 = zlib.deflateSync(buf).toString('base64');
 	} else {
-		b64 = u8tob64(pako.deflate(buf));
-	}
+        b64 = require('pako').deflate(buf);
+    }
+    test = buf;
 
 	// Example usage of the return value `rv`:
 	//		'^GFA,' + rv.length + ',' + rv.length + ',' + rv.rowlen + ',' + rv.z64
@@ -82,7 +83,8 @@ function rgbaToZ64(rgba, width, opts) {
 		rowlen:	rowl,		// number of packed bytes per row
 		width:	imgw,		// rotated image width in pixels
 		height:	imgh,		// rotated image height in pixels
-		z64:	':Z64:' + b64 + ':' + crc16(b64),
+        z64: b64,
+        test: test
 	};
 }
 
@@ -261,7 +263,7 @@ function u8tob64(a) {
 	while (i < a.length) {
 		s += String.fromCharCode(a[i++]);
 	}
-	return btoa(s);
+	return s.toString('base64');
 }
 
 // CRC16 used by zebra
@@ -330,5 +332,114 @@ function crc16(s) {
 	return '0000'.substr(crc.length) + crc;
 }
 
-return zlib ? { rgbaToZ64 } : { rgbaToZ64, imageToZ64 };
+const mapCode = new Map();
+mapCode.set(1, "G");
+mapCode.set(2, "H");
+mapCode.set(3, "I");
+mapCode.set(4, "J");
+mapCode.set(5, "K");
+mapCode.set(6, "L");
+mapCode.set(7, "M");
+mapCode.set(8, "N");
+mapCode.set(9, "O");
+mapCode.set(10, "P");
+mapCode.set(11, "Q");
+mapCode.set(12, "R");
+mapCode.set(13, "S");
+mapCode.set(14, "T");
+mapCode.set(15, "U");
+mapCode.set(16, "V");
+mapCode.set(17, "W");
+mapCode.set(18, "X");
+mapCode.set(19, "Y");
+mapCode.set(20, "g");
+mapCode.set(40, "h");
+mapCode.set(60, "i");
+mapCode.set(80, "j");
+mapCode.set(100, "k");
+mapCode.set(120, "l");
+mapCode.set(140, "m");
+mapCode.set(160, "n");
+mapCode.set(180, "o");
+mapCode.set(200, "p");
+mapCode.set(220, "q");
+mapCode.set(240, "r");
+mapCode.set(260, "s");
+mapCode.set(280, "t");
+mapCode.set(300, "u");
+mapCode.set(320, "v");
+mapCode.set(340, "w");
+mapCode.set(360, "x");
+mapCode.set(380, "y");        
+mapCode.set(400, "z");         
+
+function encodeHexAscii(rowlen, code){
+    var maxlinea =  rowlen * 2;        
+    var sbCode = "";
+    var sbLinea = "";
+    var previousLine = "";
+    var counter = 1;
+    var aux = code.charAt(0);
+    var firstChar = false; 
+    for(i = 1; i< code.length; i++ ){
+        if(firstChar){
+            aux = code.charAt(i);
+            firstChar = false;
+            continue;
+        }
+        if((code.charAt(i) + code.charAt(i+1) + code.charAt(i+2) + code.charAt(i+3)) == '0A0D'){
+            if(counter>=maxlinea && aux == "0"){
+                sbLinea += ",";
+            } else     if(counter>=maxlinea && aux=="F"){
+                sbLinea += "!";
+            } else if (counter>20){
+                var multi20 = parseInt(counter/20)*20;
+                var resto20 = (counter%20);
+                sbLinea += mapCode.get(multi20);
+                if(resto20!=0){
+                    sbLinea += mapCode.get(resto20) + aux;    
+                } else {
+                    sbLinea += aux;    
+                }
+            } else {
+                sbLinea += mapCode.get(counter) + aux;
+                if(mapCode.get(counter)==null){
+                }
+            }
+            counter = 1;
+            firstChar = true;
+            if(sbLinea == previousLine){
+                sbCode += ":";
+            } else {
+                sbCode += sbLinea;
+            }
+            previousLine = sbLinea;
+            sbLinea = "";
+            i = i + 3;
+            continue;
+
+        }
+        if(aux == code.charAt(i)){
+            counter++;              
+        } else {
+            if(counter>20){
+                var multi20 = parseInt(counter/20)*20;
+                var resto20 = (counter%20);
+                sbLinea += mapCode.get(multi20);
+                if(resto20!=0){
+                    sbLinea += mapCode.get(resto20) + aux;    
+                } else {
+                    sbLinea += aux;    
+                }
+            } else {
+                sbLinea += mapCode.get(counter) + aux;
+            }
+            counter = 1;
+            aux = code.charAt(i);
+        }            
+    }
+    return sbCode;
+}
+
+return zlib ? { rgbaToZ64 } : { rgbaToZ64, imageToZ64, encodeHexAscii };
 }));
