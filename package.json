@@ -30,6 +30,7 @@
     "test": "tests"
   },
   "dependencies": {
-    "pako": "^2.1.0"
+    "pako": "^2.1.0",
+    "react-zlib-js": "^1.0.5"
   }
 }
